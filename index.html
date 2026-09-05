@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="ForestSim — клеточный симулятор леса и пожаров" />
+  <meta name="theme-color" content="#0c1210" />
+  <title>ForestSim — лес и огонь</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%230c1210' width='32' height='32'/%3E%3Ccircle cx='16' cy='18' r='8' fill='%232d6a4f'/%3E%3Crect x='14' y='22' width='4' height='6' fill='%235c4033'/%3E%3Ccircle cx='22' cy='10' r='3' fill='%23ff9f1c'/%3E%3C/svg%3E" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">🌲</span>
+        <div>
+          <h1>ForestSim</h1>
+          <p class="tagline">рост · молнии · огонь · пепел</p>
+        </div>
+      </div>
+      <div class="stats" id="stats-bar" aria-live="polite">
+        <div class="stat"><span class="stat-label">Деревья</span><span class="stat-value" id="stat-trees">0</span></div>
+        <div class="stat hot"><span class="stat-label">Горит</span><span class="stat-value" id="stat-burning">0</span></div>
+        <div class="stat"><span class="stat-label">Пепел</span><span class="stat-value" id="stat-ash">0</span></div>
+        <div class="stat"><span class="stat-label">Тик</span><span class="stat-value" id="stat-tick">0</span></div>
+        <div class="stat"><span class="stat-label">Молнии</span><span class="stat-value" id="stat-lightning">0</span></div>
+        <div class="stat"><span class="stat-label">Пожары</span><span class="stat-value" id="stat-fires">0</span></div>
+        <div class="stat"><span class="stat-label">Сетка</span><span class="stat-value" id="stat-grid">—</span></div>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="stage" aria-label="Симуляция">
+        <div id="canvas-wrap" class="canvas-wrap">
+          <canvas id="forest-canvas" role="img" aria-label="Карта леса"></canvas>
+        </div>
+      </section>
+
+      <aside class="sidebar" aria-label="Управление">
+        <div class="panel transport">
+          <div class="btn-row">
+            <button type="button" id="btn-play" class="btn primary active">Пауза</button>
+            <button type="button" id="btn-step" class="btn">Шаг</button>
+            <button type="button" id="btn-reset" class="btn danger">Сброс</button>
+          </div>
+          <div class="speed-row" role="group" aria-label="Скорость">
+            <span class="row-label">Скорость</span>
+            <button type="button" class="btn speed active" data-speed="1">×1</button>
+            <button type="button" class="btn speed" data-speed="2">×2</button>
+            <button type="button" class="btn speed" data-speed="3">×3</button>
+            <button type="button" class="btn speed" data-speed="5">×5</button>
+            <button type="button" class="btn speed" data-speed="10">×10</button>
+          </div>
+        </div>
+
+        <div class="panel history-panel">
+          <div class="panel-head">
+            <h2>История</h2>
+            <span id="history-status" class="badge">live</span>
+          </div>
+          <label class="scrub-label" for="history-scrub">
+            <span id="history-label">нет истории</span>
+          </label>
+          <input type="range" id="history-scrub" min="0" max="0" value="0" step="1" />
+          <button type="button" id="btn-live" class="btn accent hidden">▶ К живому краю</button>
+        </div>
+
+        <div class="panel tools-panel">
+          <h2>Инструменты</h2>
+          <div class="btn-row wrap">
+            <button type="button" class="btn tool active" data-tool="plant">Посадить</button>
+            <button type="button" class="btn tool" data-tool="clear">Очистить</button>
+            <button type="button" class="btn tool" data-tool="ignite">Поджечь</button>
+            <button type="button" class="btn tool" data-tool="extinguish">Потушить</button>
+          </div>
+          <label class="slider-field">
+            <span>Кисть: <strong id="brush-label">2</strong></span>
+            <input type="range" id="brush-size" min="0" max="12" value="2" step="1" />
+          </label>
+        </div>
+
+        <div class="panel settings-wrap">
+          <button type="button" id="settings-toggle" class="settings-toggle" aria-expanded="false">
+            <span class="chevron">▸</span> Настройки
+          </button>
+          <div id="settings-panel" class="settings-body">
+            <label class="slider-field">
+              <span>Скорость роста <em id="val-growth">0.0040</em></span>
+              <input type="range" id="set-growth" min="0.0005" max="0.02" step="0.0005" value="0.004" />
+            </label>
+            <label class="slider-field">
+              <span>Размножение <em id="val-repro">0.018</em></span>
+              <input type="range" id="set-repro" min="0" max="0.08" step="0.001" value="0.018" />
+            </label>
+            <label class="slider-field">
+              <span>Частота молний (×10⁻⁵) <em id="val-lightning">8.00</em></span>
+              <input type="range" id="set-lightning" min="0" max="40" step="0.5" value="8" />
+            </label>
+            <label class="slider-field">
+              <span>Сила огня <em id="val-fire">1.00</em></span>
+              <input type="range" id="set-fire" min="0.2" max="2.5" step="0.05" value="1" />
+            </label>
+            <label class="slider-field">
+              <span>Влажность <em id="val-humidity">0.35</em></span>
+              <input type="range" id="set-humidity" min="0" max="1" step="0.01" value="0.35" />
+            </label>
+            <label class="slider-field">
+              <span>Начальная плотность леса <em id="val-density">0.42</em></span>
+              <input type="range" id="set-density" min="0.05" max="0.9" step="0.01" value="0.42" />
+            </label>
+            <button type="button" id="btn-apply-density" class="btn block">Применить плотность (сброс)</button>
+            <label class="slider-field">
+              <span>Сила ветра <em id="val-wind-str">0.40</em></span>
+              <input type="range" id="set-wind-str" min="0" max="1.5" step="0.05" value="0.4" />
+            </label>
+            <label class="slider-field">
+              <span>Направление ветра <em id="val-wind-dir">0°</em></span>
+              <input type="range" id="set-wind-dir" min="0" max="359" step="1" value="0" />
+            </label>
+            <label class="slider-field">
+              <span>Размер клетки (px) <em id="val-cellsize">6</em></span>
+              <input type="range" id="set-cellsize" min="3" max="12" step="1" value="6" />
+            </label>
+            <label class="slider-field">
+              <span>Длина буфера истории</span>
+              <input type="number" id="set-history" min="50" max="2000" step="50" value="400" />
+            </label>
+            <label class="slider-field seed-field">
+              <span>Seed RNG</span>
+              <div class="seed-row">
+                <input type="text" id="set-seed" inputmode="numeric" autocomplete="off" />
+                <button type="button" id="btn-random-seed" class="btn" title="Случайный seed">🎲</button>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <p class="hint">Рисуйте на карте · история как видео · GitHub Pages ready</p>
+      </aside>
+    </main>
+  </div>
+
+  <script src="js/sim.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
