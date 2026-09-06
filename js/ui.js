@@ -87,10 +87,17 @@
         ['growthRate', '#set-growth'],
         ['reproductionRate', '#set-repro'],
         ['lightningChance', '#set-lightning'],
+        ['lightningIgnitionProb', '#set-ignition'],
         ['fireStrength', '#set-fire'],
         ['humidity', '#set-humidity'],
+        ['moistureExtinction', '#set-mf-ext'],
         ['initialDensity', '#set-density'],
         ['windStrength', '#set-wind-str'],
+        ['windMeanSpeed', '#set-wind-mean'],
+        ['windMaxSpeed', '#set-wind-max'],
+        ['windPersistence', '#set-wind-persist'],
+        ['windGustiness', '#set-wind-gust'],
+        ['windShiftRate', '#set-wind-shift'],
       ];
       map.forEach(([key, sel]) => {
         const el = this.$(sel);
@@ -99,19 +106,54 @@
           let v = parseFloat(el.value);
           if (key === 'lightningChance') v = v / 100000; // UI shows ×10⁻⁵ style
           app.sim.params[key] = v;
+          // In manual mode, strength slider drives live wind
+          if (key === 'windStrength' && app.sim.params.windMode === 'manual') {
+            app.sim._windSpeed = v;
+            app.sim._syncWindExpose();
+          }
           self._updateSettingLabels();
+          self._syncManualWindDisabled();
         };
         el.addEventListener('input', handler);
       });
 
-      // Wind direction
-      this.$('#set-wind-dir').addEventListener('input', () => {
-        const deg = parseFloat(this.$('#set-wind-dir').value) || 0;
-        const rad = (deg * Math.PI) / 180;
-        app.sim.params.windDx = Math.sin(rad);
-        app.sim.params.windDy = -Math.cos(rad); // 0° = north (up)
-        self._updateSettingLabels();
-      });
+      // Wind mode auto/manual
+      const windAuto = this.$('#set-wind-auto');
+      if (windAuto) {
+        windAuto.addEventListener('change', () => {
+          app.sim.params.windMode = windAuto.checked ? 'auto' : 'manual';
+          if (!windAuto.checked) {
+            // Sync manual sliders from current live wind
+            const deg = Math.round(app.sim.wind.dirDeg);
+            const str = app.sim.wind.speed;
+            const dirEl = self.$('#set-wind-dir');
+            const strEl = self.$('#set-wind-str');
+            if (dirEl) dirEl.value = String(deg);
+            if (strEl) strEl.value = String(str.toFixed(2));
+            const rad = (deg * Math.PI) / 180;
+            app.sim.params.windDx = Math.sin(rad);
+            app.sim.params.windDy = -Math.cos(rad);
+            app.sim.params.windStrength = str;
+          }
+          self._updateSettingLabels();
+          self._syncManualWindDisabled();
+        });
+      }
+
+      // Wind direction (manual)
+      const windDir = this.$('#set-wind-dir');
+      if (windDir) {
+        windDir.addEventListener('input', () => {
+          if (app.sim.params.windMode === 'auto') return;
+          const deg = parseFloat(windDir.value) || 0;
+          const rad = (deg * Math.PI) / 180;
+          app.sim.params.windDx = Math.sin(rad);
+          app.sim.params.windDy = -Math.cos(rad); // 0° = north (up)
+          app.sim._windDir = rad;
+          app.sim._syncWindExpose();
+          self._updateSettingLabels();
+        });
+      }
 
       // Cell size / resolution
       this.$('#set-cellsize').addEventListener('input', () => {
@@ -196,6 +238,18 @@
       canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     }
 
+    _syncManualWindDisabled() {
+      const auto = this.app.sim.params.windMode === 'auto';
+      const dirEl = this.$('#set-wind-dir');
+      const strEl = this.$('#set-wind-str');
+      const manualBlock = this.$('#wind-manual-fields');
+      if (dirEl) dirEl.disabled = auto;
+      if (strEl) strEl.disabled = auto;
+      if (manualBlock) manualBlock.classList.toggle('dimmed', auto);
+      const autoFields = this.$('#wind-auto-fields');
+      if (autoFields) autoFields.classList.toggle('dimmed', !auto);
+    }
+
     _syncTransport() {
       const app = this.app;
       const playBtn = this.$('#btn-play');
@@ -239,10 +293,38 @@
       set('#val-growth', p.growthRate.toFixed(4));
       set('#val-repro', p.reproductionRate.toFixed(3));
       set('#val-lightning', (p.lightningChance * 100000).toFixed(2));
+      set(
+        '#val-ignition',
+        (p.lightningIgnitionProb != null ? p.lightningIgnitionProb : 0.18).toFixed(2)
+      );
       set('#val-fire', p.fireStrength.toFixed(2));
       set('#val-humidity', p.humidity.toFixed(2));
+      set(
+        '#val-mf-ext',
+        (p.moistureExtinction != null ? p.moistureExtinction : 0.6).toFixed(2)
+      );
       set('#val-density', p.initialDensity.toFixed(2));
       set('#val-wind-str', p.windStrength.toFixed(2));
+      set(
+        '#val-wind-mean',
+        (p.windMeanSpeed != null ? p.windMeanSpeed : 0.35).toFixed(2)
+      );
+      set(
+        '#val-wind-max',
+        (p.windMaxSpeed != null ? p.windMaxSpeed : 1.2).toFixed(2)
+      );
+      set(
+        '#val-wind-persist',
+        (p.windPersistence != null ? p.windPersistence : 0.95).toFixed(2)
+      );
+      set(
+        '#val-wind-gust',
+        (p.windGustiness != null ? p.windGustiness : 0.35).toFixed(2)
+      );
+      set(
+        '#val-wind-shift',
+        (p.windShiftRate != null ? p.windShiftRate : 0.008).toFixed(3)
+      );
       const deg = this.$('#set-wind-dir');
       if (deg) set('#val-wind-dir', deg.value + '°');
       set('#val-cellsize', String(this.app.targetCellCss));
@@ -257,15 +339,25 @@
       setVal('#set-growth', p.growthRate);
       setVal('#set-repro', p.reproductionRate);
       setVal('#set-lightning', p.lightningChance * 100000);
+      setVal('#set-ignition', p.lightningIgnitionProb != null ? p.lightningIgnitionProb : 0.18);
       setVal('#set-fire', p.fireStrength);
       setVal('#set-humidity', p.humidity);
+      setVal('#set-mf-ext', p.moistureExtinction != null ? p.moistureExtinction : 0.6);
       setVal('#set-density', p.initialDensity);
       setVal('#set-wind-str', p.windStrength);
+      setVal('#set-wind-mean', p.windMeanSpeed != null ? p.windMeanSpeed : 0.35);
+      setVal('#set-wind-max', p.windMaxSpeed != null ? p.windMaxSpeed : 1.2);
+      setVal('#set-wind-persist', p.windPersistence != null ? p.windPersistence : 0.95);
+      setVal('#set-wind-gust', p.windGustiness != null ? p.windGustiness : 0.35);
+      setVal('#set-wind-shift', p.windShiftRate != null ? p.windShiftRate : 0.008);
       setVal('#set-cellsize', this.app.targetCellCss);
       setVal('#set-history', this.app.history.capacity);
       setVal('#set-seed', this.app.sim.seed);
       setVal('#brush-size', this.brush);
       this.$('#brush-label').textContent = String(this.brush);
+
+      const windAuto = this.$('#set-wind-auto');
+      if (windAuto) windAuto.checked = p.windMode !== 'manual';
 
       // Derive wind angle from dx/dy
       let deg = 0;
@@ -275,6 +367,7 @@
       }
       setVal('#set-wind-dir', Math.round(deg));
       this._updateSettingLabels();
+      this._syncManualWindDisabled();
     }
 
     syncHistoryScrubber() {
@@ -306,6 +399,14 @@
       this.$('#stat-lightning').textContent = String(s.lightnings);
       this.$('#stat-fires').textContent = String(s.firesStarted);
       this.$('#stat-grid').textContent = `${this.app.sim.cols}×${this.app.sim.rows}`;
+
+      // Live wind HUD
+      const w = this.app.sim.wind;
+      const windEl = this.$('#stat-wind');
+      if (windEl && w) {
+        const deg = Math.round(w.dirDeg);
+        windEl.textContent = `${deg}° · ${w.speed.toFixed(2)}`;
+      }
     }
 
     _syncAll() {

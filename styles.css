@@ -453,3 +453,54 @@ input[type="text"] {
     padding: 8px 10px;
   }
 }
+
+/* —— Wind HUD & settings polish —— */
+.stat.wind-stat {
+  border-color: rgba(94, 180, 220, 0.4);
+  background: rgba(70, 140, 180, 0.1);
+  min-width: 88px;
+}
+
+.stat.wind-stat .stat-value {
+  font-size: 0.85rem;
+}
+
+.settings-subhead {
+  margin: 12px 0 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent-bright);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.check-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.check-field input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.dimmed {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.dimmed input:disabled {
+  opacity: 0.7;
+}
+
+#wind-auto-fields,
+#wind-manual-fields {
+  transition: opacity 0.2s ease;
+}

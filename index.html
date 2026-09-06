@@ -26,6 +26,7 @@
         <div class="stat"><span class="stat-label">Тик</span><span class="stat-value" id="stat-tick">0</span></div>
         <div class="stat"><span class="stat-label">Молнии</span><span class="stat-value" id="stat-lightning">0</span></div>
         <div class="stat"><span class="stat-label">Пожары</span><span class="stat-value" id="stat-fires">0</span></div>
+        <div class="stat wind-stat"><span class="stat-label">Ветер</span><span class="stat-value" id="stat-wind">0° · 0.35</span></div>
         <div class="stat"><span class="stat-label">Сетка</span><span class="stat-value" id="stat-grid">—</span></div>
       </div>
     </header>
@@ -98,6 +99,10 @@
               <input type="range" id="set-lightning" min="0" max="40" step="0.5" value="8" />
             </label>
             <label class="slider-field">
+              <span>Вероятность зажигания молнией <em id="val-ignition">0.18</em></span>
+              <input type="range" id="set-ignition" min="0.02" max="0.6" step="0.01" value="0.18" />
+            </label>
+            <label class="slider-field">
               <span>Сила огня <em id="val-fire">1.00</em></span>
               <input type="range" id="set-fire" min="0.2" max="2.5" step="0.05" value="1" />
             </label>
@@ -106,18 +111,53 @@
               <input type="range" id="set-humidity" min="0" max="1" step="0.01" value="0.35" />
             </label>
             <label class="slider-field">
+              <span>Порог влажности тушения <em id="val-mf-ext">0.60</em></span>
+              <input type="range" id="set-mf-ext" min="0.3" max="0.95" step="0.01" value="0.6" />
+            </label>
+            <label class="slider-field">
               <span>Начальная плотность леса <em id="val-density">0.42</em></span>
               <input type="range" id="set-density" min="0.05" max="0.9" step="0.01" value="0.42" />
             </label>
             <button type="button" id="btn-apply-density" class="btn block">Применить плотность (сброс)</button>
-            <label class="slider-field">
-              <span>Сила ветра <em id="val-wind-str">0.40</em></span>
-              <input type="range" id="set-wind-str" min="0" max="1.5" step="0.05" value="0.4" />
+
+            <h3 class="settings-subhead">Ветер</h3>
+            <label class="check-field">
+              <input type="checkbox" id="set-wind-auto" checked />
+              <span>Случайный ветер (авто)</span>
             </label>
-            <label class="slider-field">
-              <span>Направление ветра <em id="val-wind-dir">0°</em></span>
-              <input type="range" id="set-wind-dir" min="0" max="359" step="1" value="0" />
-            </label>
+            <div id="wind-auto-fields">
+              <label class="slider-field">
+                <span>Инерция ветра <em id="val-wind-persist">0.95</em></span>
+                <input type="range" id="set-wind-persist" min="0.8" max="0.99" step="0.005" value="0.95" />
+              </label>
+              <label class="slider-field">
+                <span>Порывистость <em id="val-wind-gust">0.35</em></span>
+                <input type="range" id="set-wind-gust" min="0" max="1" step="0.05" value="0.35" />
+              </label>
+              <label class="slider-field">
+                <span>Средняя сила ветра <em id="val-wind-mean">0.35</em></span>
+                <input type="range" id="set-wind-mean" min="0.05" max="1.0" step="0.05" value="0.35" />
+              </label>
+              <label class="slider-field">
+                <span>Макс. сила ветра <em id="val-wind-max">1.20</em></span>
+                <input type="range" id="set-wind-max" min="0.3" max="1.8" step="0.05" value="1.2" />
+              </label>
+              <label class="slider-field">
+                <span>Частота смены режима ветра <em id="val-wind-shift">0.008</em></span>
+                <input type="range" id="set-wind-shift" min="0.001" max="0.05" step="0.001" value="0.008" />
+              </label>
+            </div>
+            <div id="wind-manual-fields" class="dimmed">
+              <label class="slider-field">
+                <span>Сила ветра (ручной) <em id="val-wind-str">0.40</em></span>
+                <input type="range" id="set-wind-str" min="0" max="1.5" step="0.05" value="0.4" disabled />
+              </label>
+              <label class="slider-field">
+                <span>Направление ветра <em id="val-wind-dir">0°</em></span>
+                <input type="range" id="set-wind-dir" min="0" max="359" step="1" value="0" disabled />
+              </label>
+            </div>
+
             <label class="slider-field">
               <span>Размер клетки (px) <em id="val-cellsize">6</em></span>
               <input type="range" id="set-cellsize" min="3" max="12" step="1" value="6" />
